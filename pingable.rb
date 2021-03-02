@@ -44,7 +44,7 @@ module Pingable
       request = Net::HTTP::Post.new(url);
       add_request_fields(request,true,login_body);
       response = connection.request(request);
-      jsn = JSON.parse(response.body);
+      jsn = json_parser(response.body);
       @ping_token = jsn["requestId"];
       Fiber.yield(response);
     end
@@ -79,14 +79,14 @@ module Pingable
         request = Net::HTTP::Get.new(url);
         add_request_fields(request);
         response = connection.request(request);
-        @list_json = JSON.parse(response.body);
+        @list_json = json_parser(response.body);
         Fiber.yield(response)
       end
     end
     return fiber;
   end
 
-  def test_fiber()
+  def test_fiber()#only checksum neede
     fiber = Fiber.new do
       url = URI(EXTERN_URL_2 + '/ping/test');
       connection = Net::HTTP.new(url.host, url.port);
@@ -139,6 +139,15 @@ module Pingable
       return updated;
     end
     return updated;
+  end
+
+  def json_parser(str)
+    begin
+      JSON.parse(str);
+    rescue
+      print "\u{1f6a8 20 1f6a8 20 1f6a8 20}could not parse: #{str}\u{0a}"#🚨
+      return nil;
+    end
   end
 
 

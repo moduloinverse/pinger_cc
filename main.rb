@@ -12,17 +12,17 @@ class Pinger
     fiber = Fiber.new {
       10.times {print "\u{1f6f8 20 20 20}"}#🛸
       print "test to_hash \u{1f52c 0a}"#🔬
-      pp (test_fiber.resume().to_hash());
+      pp (test_fiber.resume().to_hash());#code 200?
 
       10.times {print "\u{1f511 20 20 20}"}#🔑
       print "login body json \u{1f52c 0a}"#🔬
       login_response = login_fiber.resume()
-      login_response_body_parsed = JSON.parse(login_response.body);
-      #@ping_token = login_response_body_parsed["requestId"];
+      login_response_body_parsed = json_parser(login_response.body);
+
       #pp @ping_token;#got parsed? raise if not
       pp login_response_body_parsed;
       loop do
-        jsn = JSON.parse(ping_fiber.resume().body);
+        jsn = json_parser(ping_fiber.resume().body);
         pp jsn;
         list_fiber.resume();
         print "\u{1f9f0 20 20 20 1f9f0 20 20 20 1f9f0 20 20 20 1f9f0 0a}"#🧰
