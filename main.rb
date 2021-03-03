@@ -11,16 +11,14 @@ class Pinger
   def main_fiber()
     fiber = Fiber.new {
       10.times {print "\u{1f6f8 20 20 20}"}#🛸
-      print "test to_hash \u{1f52c 0a}"#🔬
-      pp (test_fiber.resume().to_hash());#code 200?
-
+      test_response = test_fiber.resume();
+      check_test_response(test_response);
+      #try switch server
       10.times {print "\u{1f511 20 20 20}"}#🔑
-      print "login body json \u{1f52c 0a}"#🔬
       login_response = login_fiber.resume()
-      login_response_body_parsed = json_parser(login_response.body);
+      exit 1 unless check_login_success(login_response);
 
-      #pp @ping_token;#got parsed? raise if not
-      pp login_response_body_parsed;
+
       loop do
         jsn = json_parser(ping_fiber.resume().body);
         pp jsn;

@@ -31,28 +31,30 @@ module Pingable
 
   def login_fiber()
     fiber = Fiber.new do
-      login_body = {userHome:"C:\\User\\#{@user_creds.split(":")[0]}",
-      userDomain:"DESKTOP-#{@user_creds.split(":")[0]}",
-      userCountry:'DE',userLanguage:'de',osArch:'amd64',osName:'Windows 10',
-      osVersion:'10.0',fileEncoding:'Cp1252',fileSeparator:'\\',
-      sunArchDataModel:'64',sunDesktop:'windows',sunCpuIsalist:'amd64',
-      javaLauncherPath:'launcher8182',javaRuntimeVersion:'11.0.10+9-LTS'}
+      loop do
+        login_body = {userHome:"C:\\User\\#{@user_creds.split(":")[0]}",
+        userDomain:"DESKTOP-#{@user_creds.split(":")[0]}",
+        userCountry:'DE',userLanguage:'de',osArch:'amd64',osName:'Windows 10',
+        osVersion:'10.0',fileEncoding:'Cp1252',fileSeparator:'\\',
+        sunArchDataModel:'64',sunDesktop:'windows',sunCpuIsalist:'amd64',
+        javaLauncherPath:'launcher8182',javaRuntimeVersion:'11.0.10+9-LTS'}
 
-      url = URI(EXTERN_URL_2 + '/ping/login');
-      connection = Net::HTTP.new(url.host, url.port);
-      connection.use_ssl = true;
-      request = Net::HTTP::Post.new(url);
-      add_request_fields(request,true,login_body);
-      response = connection.request(request);
-      jsn = json_parser(response.body);
-      @ping_token = jsn["requestId"];
-      Fiber.yield(response);
+        url = URI(EXTERN_URL_2 + '/ping/login');
+        connection = Net::HTTP.new(url.host, url.port);
+        connection.use_ssl = true;
+        request = Net::HTTP::Post.new(url);
+        add_request_fields(request,true,login_body,true);
+        response = connection.request(request);
+        jsn = json_parser(response.body);
+        @ping_token = jsn["requestId"];
+        Fiber.yield(response);
+      end
     end
       return fiber;
   end
 
-  def ping_fiber()
-    fiber = Fiber.new do
+  def ping_fiber()#only on first ping auth needed/ or ip change
+    fiber = Fiber.new do |auth|#true or false
       loop do
         ping_request_model = {requestId:"#{@ping_token}",
              lastResponseTime:"#{rand(400..1600)}",
@@ -62,7 +64,7 @@ module Pingable
         connection = Net::HTTP.new(url.host, url.port);
         connection.use_ssl = true;
         request = Net::HTTP::Post.new(url);
-        add_request_fields(request,true,ping_request_model);
+        add_request_fields(request,true,ping_request_model,auth);
         response = connection.request(request);
         Fiber.yield(response);
       end
@@ -77,7 +79,7 @@ module Pingable
         connection = Net::HTTP.new(url.host, url.port);
         connection.use_ssl = true;
         request = Net::HTTP::Get.new(url);
-        add_request_fields(request);
+        add_request_fields(request,false,false,true);
         response = connection.request(request);
         @list_json = json_parser(response.body);
         Fiber.yield(response)
@@ -86,15 +88,17 @@ module Pingable
     return fiber;
   end
 
-  def test_fiber()#only checksum neede
+  def test_fiber()
     fiber = Fiber.new do
-      url = URI(EXTERN_URL_2 + '/ping/test');
-      connection = Net::HTTP.new(url.host, url.port);
-      connection.use_ssl = true;
-      request = Net::HTTP::Post.new(url);
-      add_request_fields(request,true);
-      response = connection.request(request);
-      Fiber.yield(response);
+      loop do
+        url = URI(EXTERN_URL_2 + '/ping/test');
+        connection = Net::HTTP.new(url.host, url.port);
+        connection.use_ssl = true;
+        request = Net::HTTP::Post.new(url);
+        add_request_fields(request,true,false,false);
+        response = connection.request(request);
+        Fiber.yield(response);
+      end
     end
     return fiber;
   end
@@ -105,8 +109,8 @@ module Pingable
     @auth_id = Base64.urlsafe_encode64(@user_creds);
   end
 
-  def add_request_fields(request,checksum=nil,body=nil)
-    request['authorization'] = 'Basic ' + @auth_id;
+  def add_request_fields(request,checksum=nil,body=nil,auth=nil)
+    request['authorization'] = 'Basic ' + @auth_id if auth;
     request['checksum'] = CHECKSUM if checksum;
     request['Content-Type'] = 'application/json';
     request['User-Agent'] = 'Swagger-Codegen/1.2.0-SNAPSHOT/java';
@@ -147,6 +151,30 @@ module Pingable
     rescue
       print "\u{1f6a8 20 1f6a8 20 1f6a8 20}could not parse: #{str}\u{0a}"#🚨
       return nil;
+    end
+  end
+
+  def check_login_success(login_response)#ping_token set or no
+    login_response_body_parsed = json_parser(login_response.body);
+    if (login_response.code=='200' && login_response_body_parsed && @ping_token)
+      print "\u{1f510 20}server replied HTTP-OK to login request\u{0a}";#🔐
+      print "\u{1f6c2 20} #{@ping_token} is your 'requestId' for this session";#🛂
+      return true;
+    else
+      print "login body json \u{1f52c 0a}"#🔬
+      pp login_response_body_parsed;
+      return false;
+    end
+  end
+
+  def check_test_response(test_response)
+    if (test_response.code=='200')
+      print "\u{1f4f6 20}server replied HTTP-OK to test request\u{0a}";#📶
+      return true;
+    else
+      print "test to_hash \u{1f52c 0a}"#🔬
+      pp test_response.to_hash();
+      return false;
     end
   end
 
