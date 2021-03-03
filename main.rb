@@ -20,12 +20,17 @@ class Pinger
 
 
       loop do
-        jsn = json_parser(ping_fiber.resume().body);
-        pp jsn;
+        jsn = json_parser(ping_fiber.resume(true).body);
+        #pp jsn
         list_fiber.resume();
-        print "\u{1f9f0 20 20 20 1f9f0 20 20 20 1f9f0 20 20 20 1f9f0 0a}"#🧰
-        print "#{@check_time} a: #{@answer} q: #{@question} \n";
-        pp @list_json;
+        #print "\u{1f9f0 20 20 20 1f9f0 20 20 20 1f9f0 20 20 20 1f9f0 0a}"#🧰
+        print "\u{0a 23f1}: #{@check_time} q: #{@question} a: #{@answer}\n";
+        pp @list_json['presenceCheckList'][-1];
+        print "\u{1f3f7 20 20 20 1f3f7 1f3f7 20 20 20 1f3f7} this session\n" #🏷
+        pp @list_json['pingList'][-1];
+        #to implement count all time since today.08 am
+        #eliminate duplicated time intervals
+
         if jsn['nextPresenceCheck'] && (!@question)
           @question = jsn['nextPresenceCheck']['question'];
           @check_time = Time.now;
