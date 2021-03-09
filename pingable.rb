@@ -186,6 +186,8 @@ module Pingable
       print "\u{0a 1f691 20 20 20 1f692 20 20 20 1f691 20 20 20 0a}"#🚒
       print "#{e.class} occured at: #{Time.now}";
       print "\u{0a 1f692 20 20 20 1f691 20 20 20 1f692 20 20 20 0a}"#🚑
+      ensure
+        return response;
     end
   end
 
