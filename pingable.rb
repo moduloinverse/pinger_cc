@@ -78,7 +78,7 @@ module Pingable
     10.times {print "\u{1f511 20 20 20}"}#🔑
     login_response = login_fiber.resume()
     exit 1 unless check_login_success(login_response);
-    #RE IMPLEMENT, use TimeDiff > 12 min, relog
+    #RE IMPLEMENT, use TimeDiff > 12 min to do relog
   end
 
 
@@ -217,11 +217,13 @@ module Pingable
 
 #rescues json parser, prints string_to_parse on failures
   def json_parser(str)
+    parsed = nil;
     begin
-      JSON.parse(str);
+      parsed = JSON.parse(str);
     rescue
       print "\u{1f6a8 20 1f6a8 20 1f6a8 20}could not parse: #{str}\u{0a}"#🚨
-      return nil;
+    ensure
+      return parsed;
     end
   end
 
@@ -266,6 +268,8 @@ module Pingable
     end
 
 #TO IMPLEMENT
+    #if any ping_json[notifications] set, print every x min
+    # 60sec * 10 600s >>> mod 600 == 0, epoch time with 1_600_000_600
     #@overview['08am']={total_min:nil,remaining_min:nil}#@today08 used here
     #eliminate where endtime > startime
     # ts = Time.parse(p[0][p[0].keys[0]])
