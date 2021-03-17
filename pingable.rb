@@ -27,6 +27,7 @@ module Pingable
   # cuz its temporary.
   # requestId 🌩329 X-Request-ID
 
+  attr_accessor :base_url;
   attr_accessor :user_creds, :auth_id, :ping_token;
   attr_accessor :answer, :question, :presence_check_time;
   attr_accessor :list_json, :ping_json;
@@ -70,15 +71,15 @@ module Pingable
 
 #calls test,calls login
   def do_login()
+    switch_base_url;
     10.times {print "\u{1f6f8 20 20 20}"}#🛸
     test_response = test_fiber.resume();
     check_test_response(test_response);
 
-    #try switch server#TO IMPLEMENT
     10.times {print "\u{1f511 20 20 20}"}#🔑
     login_response = login_fiber.resume()
-    exit 1 unless check_login_success(login_response);
-    #RE IMPLEMENT, use TimeDiff > 12 min to do relog
+    check_login_success(login_response);
+
   end
 
 
@@ -95,14 +96,14 @@ module Pingable
         sunArchDataModel:'64',sunDesktop:'windows',sunCpuIsalist:'amd64',
         javaLauncherPath:'launcher8182',javaRuntimeVersion:'11.0.10+9-LTS'}
 
-        url = (EXTERN_URL_2 + '/ping/login');
+        url = (@base_url + '/ping/login');
         response =send_to_server(url,Net::HTTP::Post,true,true,login_body);
         jsn = json_parser(response.body) if response
         @ping_token = jsn["requestId"];
         t1=Time.now();
         @today08 = Time.new(t1.year,t1.month,t1.day,8);
         #here is a good place, requestId from server, is not valid on day switch
-        #pretty bad though, could be bug, could be intentionally
+        #from server-side pretty bad though, could be bug, could be intentionally
         Fiber.yield(response);
       end
     end
@@ -119,7 +120,7 @@ module Pingable
              lastResponseTime:"#{rand(400..1600)}",#System.currentTimeMillis()
              answer:"#{@answer}",userProcessModel:''}
 
-        url = (EXTERN_URL_2 + '/ping/ping');
+        url = (@base_url + '/ping/ping');
         response =
               send_to_server(url,Net::HTTP::Post,true,true,ping_request_model);
         @ping_json = json_parser(response.body) if response
@@ -133,9 +134,12 @@ module Pingable
   def list_fiber()
     fiber = Fiber.new do
       loop do
-        url = (EXTERN_URL_2 + '/ping/list');
+        url = (@base_url + '/ping/list');
         response = send_to_server(url,Net::HTTP::Get,true,false,false);
         @list_json = json_parser(response.body) if response
+        #avoiding changes on orinal object, in create overview
+        @overview = json_parser(response.body) if response
+                    #lots of trust that server spits out latest value as last,
         @last_server_time = Time.parse(@list_json['pingList'][-1]['enddate']) if @list_json
         Fiber.yield(response)
       end
@@ -147,7 +151,7 @@ module Pingable
   def test_fiber()
     fiber = Fiber.new do
       loop do
-        url = (EXTERN_URL_2 + '/ping/test');
+        url = (@base_url + '/ping/test');
         response = send_to_server(url,Net::HTTP::Post,true,true,false);
                                                     #auth checksum body
         Fiber.yield(response);
@@ -186,8 +190,8 @@ module Pingable
       print "\u{0a 1f691 20 20 20 1f692 20 20 20 1f691 20 20 20 0a}"#🚒
       print "#{e.class} occured at: #{Time.now}";
       print "\u{0a 1f692 20 20 20 1f691 20 20 20 1f692 20 20 20 0a}"#🚑
-      ensure
-        return response;
+    ensure
+      return response;
     end
   end
 
@@ -207,7 +211,7 @@ module Pingable
   end
 
 
-#reports if presence_check_time is listed in any "presenceCheckList"
+#reports if presence_check_time is listed in ANY "presenceCheckList"
   def check_presence_updated
     updated = false;
     @overview['pings'].each{|📦| updated = true if #1f4e6
@@ -244,7 +248,7 @@ module Pingable
 #checks and prints information whether success or response hash on failures
   def check_test_response(test_response)
     if (test_response.code=='200')
-      print "\u{0a 1f4f6 20}server replied HTTP-OK to test request\u{0a}";#📶
+      print "\u{0a 1f4f6 20}#{@base_url} replied HTTP-OK to test request\u{0a}";#📶
       return true;
     else
       print "test to_hash \u{1f52c 0a}"#🔬
@@ -253,18 +257,24 @@ module Pingable
     end
   end
 
-#overview for user
+#overview for user,
+#and checks for time diff, when over 11 min, will clear out ping_token,
+#which will call login
   def create_overview#today08, list_json, pingList startdate enddate
-    @overview = {};
+    diff = (Time.now.to_i - @last_server_time.to_i);
+    if @overview
+      @overview['active']=(@overview['pingList'].uniq);#eliminate duplicates
+      @overview['pings']=(@overview['presenceCheckList'].uniq);
+      @overview.delete('pingList');
+      @overview.delete('presenceCheckList');
+      @overview['active'].each{|x|x.each{|(k,v)|x[k]=Time.parse(v).strftime("%H:%M:%S")}}
+      @overview['pings'].each{|x|x.each{|(k,v)|x[k]=Time.parse(v).strftime("%H:%M:%S")}}
+      @overview['time_diff']={⏲: diff,
+        ⌚: @last_server_time.strftime("%H:%M:%S")};
+    end
 
-    if @list_json
-
-      @overview['active']=(@list_json['pingList'].uniq);#eliminate duplicates
-      @overview['pings']=(@list_json['presenceCheckList'].uniq);
-      @overview['active'].each{|x|x.each{|(k,v)|x[k]=Time.parse(v).to_i}}
-      @overview['pings'].each{|x|x.each{|(k,v)|x[k]=Time.parse(v).to_i}}
-      @overview['time_diff']={⏲: (Time.now.to_i - @last_server_time.to_i),
-        ⌚: @last_server_time};
+    if (diff > (11*60)) #time diff more than 11 min, reset requestId & will do relogin
+      @ping_token=nil;
     end
 
 #TO IMPLEMENT
@@ -274,18 +284,16 @@ module Pingable
     #eliminate where endtime > startime
     # ts = Time.parse(p[0][p[0].keys[0]])
     # te = Time.parse(p[0][p[0].keys[1]])
-    #p.delete_at(index)
 
 
     #diff = (startdate<t0day08) ? (enddate-today08) : (enddate-startdate)
   end
 
-#basic variable swap
-  def switch_base_url#TO IMPLEMENT
-    #EXTERN_URL_1, EXTERN_URL_2 = EXTERN_URL_2, EXTERN_URL_1;
-    #syntax error, constant reassignemnt
+#201 or 301 server to use
+  def switch_base_url
+    @base_url = Pingable::const_get("EXTERN_URL_#{rand(1..2)}");
   end
 
-  private :send_to_server
+  private :send_to_server, :switch_base_url
 
 end
