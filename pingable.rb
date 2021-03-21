@@ -236,7 +236,7 @@ module Pingable
 
 #checks and prints information whether success or response hash on failures
   def check_test_response(test_response)
-    if (test_response.code=='200')
+    if (test_response && test_response.code=='200')
       print "\u{0a 1f4f6 20}#{@base_url} replied HTTP-OK to test request\u{0a}";#📶
       return true;
     else
@@ -256,8 +256,9 @@ module Pingable
     #changes on successfull json parsing @list_json
     #better implement here that last server time
     if @overview
-      @overview['active']=(@overview['pingList'].uniq);#throws exception on nil object
-      @overview['pings']=(@overview['presenceCheckList'].uniq);
+      @overview['active']=(@overview['pingList'].uniq) if @overview['pingList'];
+      @overview['pings'] =
+        (@overview['presenceCheckList'].uniq) if @overview['presenceCheckList'];
       @overview.delete('pingList');
       @overview.delete('presenceCheckList');
       @overview['active'].each{|x|x.each{|(k,v)|x[k]=Time.parse(v).strftime("%H:%M:%S")}}
