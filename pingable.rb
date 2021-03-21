@@ -208,7 +208,7 @@ module Pingable
   end
 
 #rescues json parser, prints string_to_parse on failures
-#returns either parsed obj or nil
+#returns either parsed obj(Hash or List) or nil
   def json_parser(str)
     parsed = nil;
     begin
@@ -272,7 +272,9 @@ module Pingable
 
       #parse as epoch time, will be needed in check_presence_updated
       #if overview parsed list_json also will be there
-      @list_json['presenceCheckList'].each{|x|x.each{|(k,v)|x[k]=Time.parse(v).to_i}}
+      @list_json['presenceCheckList'].each{|x|x.each{|(k,v)|
+        x[k] = Time.parse(v).to_i if (x[k].instance_of? String)
+      }}
 
     end
 
