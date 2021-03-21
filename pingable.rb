@@ -17,15 +17,9 @@ module Pingable
 #this is the hash value of jar file, that /updater/getClient spits out,no auth
   CHECKSUM ='5fdee34b788349d81f0e301cad52374ea5dae98f113708b8e4d9656dcd475b69';
 
-  ALL_NET_HTTP_ERRORS = [
-  Timeout::Error, Errno::EINVAL, Errno::ECONNRESET, Errno::ENETUNREACH ];
   #Base64.encode64(username:password), assert size = 24
   #4/3 n, our n is 18 = 7:10 7+1+10 =18
   #@basic_auth = Base64.encode64(@user_creds);
-
-  # in means of REST api terminology, should be called userPingToken,
-  # cuz its temporary.
-  # requestId 🌩329 X-Request-ID
 
   attr_accessor :base_url;
   attr_accessor :user_creds, :auth_id, :ping_token;
@@ -39,19 +33,11 @@ module Pingable
       loop do
 
         do_login() unless @ping_token
-        #to implemnt, set ping token to nil, combine with TimeDiff > 12min
-
-        # #print overview instead of json
-        # print "\u{0a 23f1}: #{@presence_check_time} q: #{@question} a: #{@answer}\n";
-        # pp @list_json['presenceCheckList'][-1];
-        # print "\u{1f3f7 20 20 20 1f3f7 1f3f7 20 20 20 1f3f7} this session\n" #🏷
-        # pp @list_json['pingList'][-1];
-        # #to implement count all time since today.08 am
 
         ping_fiber.resume();
         list_fiber.resume();
 
-        create_overview();
+        process_and_create_overview();#call before check_presence_updated
         pp @overview;
 
         if @ping_json['nextPresenceCheck'] && (!@question)
@@ -99,7 +85,7 @@ module Pingable
         url = (@base_url + '/ping/login');
         response =send_to_server(url,Net::HTTP::Post,true,true,login_body);
         jsn = json_parser(response.body) if response
-        @ping_token = jsn["requestId"];
+        @ping_token = jsn["requestId"];#either set or nil
         t1=Time.now();
         @today08 = Time.new(t1.year,t1.month,t1.day,8);
         #here is a good place, requestId from server, is not valid on day switch
@@ -137,10 +123,11 @@ module Pingable
         url = (@base_url + '/ping/list');
         response = send_to_server(url,Net::HTTP::Get,true,false,false);
         @list_json = json_parser(response.body) if response
-        #avoiding changes on orinal object, in create overview
+        #avoiding shallow copy issues
         @overview = json_parser(response.body) if response
-                    #lots of trust that server spits out latest value as last,
+
         @last_server_time = Time.parse(@list_json['pingList'][-1]['enddate']) if @list_json
+        #move to overview
         Fiber.yield(response)
       end
     end
@@ -170,6 +157,7 @@ module Pingable
 #builds the request to server, based on provided arguments,
 #from fibers
 #sends out that request to server
+#returns either request obj or nil
   def send_to_server(url_to_use, net_http_class,
                            auth_flag=nil, checksum_flag=nil, body=nil)
     response = nil;
@@ -214,12 +202,13 @@ module Pingable
 #reports if presence_check_time is listed in ANY "presenceCheckList"
   def check_presence_updated
     updated = false;
-    @overview['pings'].each{|📦| updated = true if #1f4e6
+    @list_json['presenceCheckList'].each{|📦| updated = true if #1f4e6
       (📦['startTime']..📦['endtime']).include?(@presence_check_time.to_i) }
     return updated;
   end
 
 #rescues json parser, prints string_to_parse on failures
+#returns either parsed obj or nil
   def json_parser(str)
     parsed = nil;
     begin
@@ -260,21 +249,34 @@ module Pingable
 #overview for user,
 #and checks for time diff, when over 11 min, will clear out ping_token,
 #which will call login
-  def create_overview#today08, list_json, pingList startdate enddate
-    diff = (Time.now.to_i - @last_server_time.to_i);
+  def process_and_create_overview#today08, list_json, pingList startdate enddate
+    diff = (Time.now.to_i - @last_server_time.to_i);#nil.to_i > 0
+    #lots of trust to server,that it would always spit out latest value as last,
+    #@last_server_time = Time.parse(@list_json['pingList'][-1]['enddate']) if @list_json
+    #changes on successfull json parsing @list_json
+    #better implement here that last server time
     if @overview
-      @overview['active']=(@overview['pingList'].uniq);#eliminate duplicates
+      @overview['active']=(@overview['pingList'].uniq);#throws exception on nil object
       @overview['pings']=(@overview['presenceCheckList'].uniq);
       @overview.delete('pingList');
       @overview.delete('presenceCheckList');
       @overview['active'].each{|x|x.each{|(k,v)|x[k]=Time.parse(v).strftime("%H:%M:%S")}}
       @overview['pings'].each{|x|x.each{|(k,v)|x[k]=Time.parse(v).strftime("%H:%M:%S")}}
-      @overview['time_diff']={⏲: diff,
-        ⌚: @last_server_time.strftime("%H:%M:%S")};
+      @overview['🏷'] = @ping_token;#1f3f7
+      @overview['⌛']={⏲: diff,#231b 23f1
+        ⌚: @last_server_time.strftime("%H:%M:%S")};#231a
+      if (@ping_json['notifications'] && @ping_json['notifications'].size > 1)
+        @overview['📯'] = @ping_json['notifications'] #1f4ef
+      end
+
+      #parse as epoch time, will be needed in check_presence_updated
+      #if overview parsed list_json also will be there
+      @list_json['presenceCheckList'].each{|x|x.each{|(k,v)|x[k]=Time.parse(v).to_i}}
+
     end
 
-    if (diff > (11*60)) #time diff more than 11 min, reset requestId & will do relogin
-      @ping_token=nil;
+    if (diff > (11*60)) #time diff more than 11 min,
+      @ping_token = nil; #will cause login call
     end
 
 #TO IMPLEMENT
