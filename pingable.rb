@@ -223,7 +223,8 @@ module Pingable
 #checks that requestId for session is set
   def check_login_success(login_response)#ping_token set or no
     login_response_body_parsed = json_parser(login_response.body);
-    if (login_response.code=='200' && login_response_body_parsed && @ping_token)
+    if (login_response && login_response.code=='200' &&
+                     login_response_body_parsed && @ping_token)
       print "\u{0a 1f510 20}server replied HTTP-OK to login request\u{0a}";#🔐
       print "\u{1f6c2 20} #{@ping_token} is your 'requestId' for this session\u{0a}";#🛂
       return true;
@@ -241,7 +242,7 @@ module Pingable
       return true;
     else
       print "test to_hash \u{1f52c 0a}"#🔬
-      pp test_response.to_hash();
+      pp test_response.to_hash() if test_response;
       return false;
     end
   end
@@ -282,16 +283,6 @@ module Pingable
       @ping_token = nil; #will cause login call
     end
 
-#TO IMPLEMENT
-    #if any ping_json[notifications] set, print every x min
-    # 60sec * 10 600s >>> mod 600 == 0, epoch time with 1_600_000_600
-    #@overview['08am']={total_min:nil,remaining_min:nil}#@today08 used here
-    #eliminate where endtime > startime
-    # ts = Time.parse(p[0][p[0].keys[0]])
-    # te = Time.parse(p[0][p[0].keys[1]])
-
-
-    #diff = (startdate<t0day08) ? (enddate-today08) : (enddate-startdate)
   end
 
 #201 or 301 server to use
