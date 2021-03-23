@@ -40,7 +40,7 @@ module Pingable
         process_and_create_overview();#call before check_presence_updated
         pp @overview;
 
-        if @ping_json['nextPresenceCheck'] && (!@question)
+        if (@ping_json && @ping_json['nextPresenceCheck'] && (!@question))
           @question = @ping_json['nextPresenceCheck']['question'];
           @presence_check_time = Time.now;
           set_answer_delay();#thread with random sleep 200s
