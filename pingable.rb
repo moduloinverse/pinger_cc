@@ -225,10 +225,10 @@ module Pingable
         success = true;
         print "\u{0a 1f510 20}server replied HTTP-OK to login request\u{0a}";#🔐
         print "\u{1f6c2 20} #{@ping_token} is your 'requestId' for this session\u{0a}";#🛂
+      else
+        print "login body json \u{1f52c 0a}"#🔬
+        pp json_parser(login_response.body)
       end
-    else
-      print "login body json \u{1f52c 0a}"#🔬
-      pp json_parser(login_response.body)
     end
   end
 
