@@ -25,7 +25,7 @@ module Pingable
   attr_accessor :user_creds, :auth_id, :ping_token;
   attr_accessor :answer, :question, :presence_check_time;
   attr_accessor :list_json, :ping_json;
-  attr_accessor :today08, :overview, :last_server_time;
+  attr_accessor :overview, :last_server_time;
 
 #main fiber, calls other fiber, controlls
   def main_fiber()
@@ -83,13 +83,10 @@ module Pingable
         javaLauncherPath:'launcher8182',javaRuntimeVersion:'11.0.10+9-LTS'}
 
         url = (@base_url + '/ping/login');
-        response =send_to_server(url,Net::HTTP::Post,true,true,login_body);
+        response = send_to_server(url,Net::HTTP::Post,true,true,login_body);
         jsn = json_parser(response.body) if response
-        @ping_token = jsn["requestId"];#either set or nil
-        t1=Time.now();
-        @today08 = Time.new(t1.year,t1.month,t1.day,8);
-        #here is a good place, requestId from server, is not valid on day switch
-        #from server-side pretty bad though, could be bug, could be intentionally
+        @ping_token = jsn["requestId"] if jsn#either set or nil
+
         Fiber.yield(response);
       end
     end
@@ -157,7 +154,7 @@ module Pingable
 #builds the request to server, based on provided arguments,
 #from fibers
 #sends out that request to server
-#returns either request obj or nil
+#returns either response obj or nil
   def send_to_server(url_to_use, net_http_class,
                            auth_flag=nil, checksum_flag=nil, body=nil)
     response = nil;
@@ -222,22 +219,22 @@ module Pingable
 
 #checks that requestId for session is set
   def check_login_success(login_response)#ping_token set or no
-    login_response_body_parsed = json_parser(login_response.body);
-    if (login_response && login_response.code=='200' &&
-                     login_response_body_parsed && @ping_token)
-      print "\u{0a 1f510 20}server replied HTTP-OK to login request\u{0a}";#🔐
-      print "\u{1f6c2 20} #{@ping_token} is your 'requestId' for this session\u{0a}";#🛂
-      return true;
+    success = false;
+    if login_response
+      if (@ping_token && login_response.code == '200')
+        success = true;
+        print "\u{0a 1f510 20}server replied HTTP-OK to login request\u{0a}";#🔐
+        print "\u{1f6c2 20} #{@ping_token} is your 'requestId' for this session\u{0a}";#🛂
+      end
     else
       print "login body json \u{1f52c 0a}"#🔬
-      pp login_response_body_parsed;
-      return false;
+      pp json_parser(login_response.body)
     end
   end
 
 #checks and prints information whether success or response hash on failures
   def check_test_response(test_response)
-    if (test_response && test_response.code=='200')
+    if (test_response && test_response.code == '200')
       print "\u{0a 1f4f6 20}#{@base_url} replied HTTP-OK to test request\u{0a}";#📶
       return true;
     else
@@ -270,6 +267,10 @@ module Pingable
       if (@ping_json['notifications'] && @ping_json['notifications'].size > 1)
         @overview['📯'] = @ping_json['notifications'] #1f4ef
       end
+      if @question #2699                1f570
+        @overview['⚙']={'q':"#{@question}","a":"#{@answer}",
+                                       "🕰":"#{@presence_check_time}"};
+      end
 
       #parse as epoch time, will be needed in check_presence_updated
       #if overview parsed list_json also will be there
@@ -280,7 +281,7 @@ module Pingable
     end
 
     if (diff > (11*60)) #time diff more than 11 min,
-      @ping_token = nil; #will cause login call
+      @ping_token,@answer,@question,@presence_check_time = nil; #will cause login call
     end
 
   end
