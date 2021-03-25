@@ -263,7 +263,8 @@ module Pingable
       @overview['🏷'] = @ping_token;#1f3f7
       @overview['⌛']={⏲: diff,#231b 23f1
         ⌚: @last_server_time.strftime("%H:%M:%S")};#231a
-      if (@ping_json['notifications'] && @ping_json['notifications'].size > 1)
+      if (@ping_json && @ping_json['notifications']
+                     && @ping_json['notifications'].size > 1)
         @overview['📯'] = @ping_json['notifications'] #1f4ef
       end
       if @question #2699                1f570
