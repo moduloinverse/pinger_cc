@@ -248,7 +248,7 @@ module Pingable
 #and checks for time diff, when over 11 min, will clear out ping_token,
 #which will call login
   def process_and_create_overview#today08, list_json, pingList startdate enddate
-    diff = (Time.now.to_i - @last_server_time.to_i);#nil.to_i > 0
+    diff = (Time.now.to_i - @last_server_time.to_i);#nil.to_i = 0
     #lots of trust to server,that it would always spit out latest value as last,
     #@last_server_time = Time.parse(@list_json['pingList'][-1]['enddate']) if @list_json
     #changes on successfull json parsing @list_json
@@ -271,17 +271,16 @@ module Pingable
         @overview['⚙']={'q':"#{@question}","a":"#{@answer}",
                                        "🕰":"#{@presence_check_time}"};
       end
-
       #parse as epoch time, will be needed in check_presence_updated
       #if overview parsed list_json also will be there
       @list_json['presenceCheckList'].each{|x|x.each{|(k,v)|
         x[k] = Time.parse(v).to_i if (x[k].instance_of? String)
       }}
-
-    end
+    end #overview truthy
 
     if (diff > (11*60)) #time diff more than 11 min,
       @ping_token,@answer,@question,@presence_check_time = nil; #will cause login call
+      @list_json,@ping_json = nil;
     end
 
   end
