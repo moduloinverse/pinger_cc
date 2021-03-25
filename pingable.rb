@@ -247,12 +247,11 @@ module Pingable
 #overview for user,
 #and checks for time diff, when over 11 min, will clear out ping_token,
 #which will call login
-  def process_and_create_overview#today08, list_json, pingList startdate enddate
+  def process_and_create_overview
     diff = (Time.now.to_i - @last_server_time.to_i);#nil.to_i = 0
-    #lots of trust to server,that it would always spit out latest value as last,
-    #@last_server_time = Time.parse(@list_json['pingList'][-1]['enddate']) if @list_json
-    #changes on successfull json parsing @list_json
-    #better implement here that last server time
+#lots of trust to server,that it would always spit out latest value as last,
+#@last_server_time = Time.parse(@list_json['pingList'][-1]['enddate']) if @list_json
+#implement here
     if @overview
       @overview['active']=(@overview['pingList'].uniq) if @overview['pingList'];
       @overview['pings'] =
