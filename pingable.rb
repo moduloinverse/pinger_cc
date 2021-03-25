@@ -280,7 +280,8 @@ module Pingable
 
     if (diff > (11*60)) #time diff more than 11 min,
       @ping_token,@answer,@question,@presence_check_time = nil; #will cause login call
-      @list_json,@ping_json = nil;
+      @list_json,@ping_json,@overview = nil;
+      pp "diff: #{diff}";
     end
 
   end
