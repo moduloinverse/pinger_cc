@@ -122,9 +122,6 @@ module Pingable
         @list_json = json_parser(response.body) if response
         #avoiding shallow copy issues
         @overview = json_parser(response.body) if response
-
-        @last_server_time = Time.parse(@list_json['pingList'][-1]['enddate']) if @list_json
-        #move to overview
         Fiber.yield(response)
       end
     end
@@ -248,10 +245,12 @@ module Pingable
 #and checks for time diff, when over 11 min, will clear out ping_token,
 #which will call login
   def process_and_create_overview
-    diff = (Time.now.to_i - @last_server_time.to_i);#nil.to_i = 0
+    if (@overview['pingList'] && @overview['pingList'].any?)
 #lots of trust to server,that it would always spit out latest value as last,
-#@last_server_time = Time.parse(@list_json['pingList'][-1]['enddate']) if @list_json
-#implement here
+#sort "startdate: enddate:" to implement
+      @last_server_time = Time.parse(@overview['pingList'][-1]['enddate']);
+    end
+    diff = (Time.now.to_i - @last_server_time.to_i);#nil.to_i = 0
     if @overview
       @overview['active']=(@overview['pingList'].uniq) if @overview['pingList'];
       @overview['pings'] =
@@ -280,8 +279,8 @@ module Pingable
 
     if (diff > (11*60)) #time diff more than 11 min,
       @ping_token,@answer,@question,@presence_check_time = nil; #will cause login call
-      @list_json,@ping_json,@overview = nil;
-      pp "diff: #{diff}";
+      @list_json,@ping_json = nil;
+      #pp "diff: #{diff}";
     end
 
   end
