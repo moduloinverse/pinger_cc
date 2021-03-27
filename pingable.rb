@@ -245,7 +245,7 @@ module Pingable
 #and checks for time diff, when over 11 min, will clear out ping_token,
 #which will call login
   def process_and_create_overview
-    if (@overview['pingList'] && @overview['pingList'].any?)
+    if (@overview && @overview['pingList'] && @overview['pingList'].any?)
 #lots of trust to server,that it would always spit out latest value as last,
 #sort "startdate: enddate:" to implement
       @last_server_time = Time.parse(@overview['pingList'][-1]['enddate']);
