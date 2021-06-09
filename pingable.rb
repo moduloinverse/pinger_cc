@@ -14,9 +14,10 @@ module Pingable
 #217.239.142.217 deutsche Telekom, dortmund, ffm, osnabrᴞck
 # guess what ip portal(dot)cc student(dot)com has
   EXTERN_URL_2 = Base64.decode64(ENCODED2);#lo_mismo
-#this is the hash value of jar file, that /updater/getClient spits out,no auth
-  CHECKSUM ='5fdee34b788349d81f0e301cad52374ea5dae98f113708b8e4d9656dcd475b69';
-
+#this is sha256.downcase value of jar file, that /updater/getClient spits out,no auth
+  #CHECKSUM ='5fdee34b788349d81f0e301cad52374ea5dae98f113708b8e4d9656dcd475b69';
+  #/\ till 080621  \/current
+  CHECKSUM = 'a98a7b09c3ce74af0d40f1886092c4e1aa6b50a22c30c09a89cf1963b6f12b77';
   #Base64.encode64(username:password), assert size = 24
   #4/3 n, our n is 18 = 7:10 7+1+10 =18
   #@basic_auth = Base64.encode64(@user_creds);
