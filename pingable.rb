@@ -5,9 +5,11 @@ require 'json';
 require 'time';
 
 module Pingable
-  ENCODED1='aHR0cHM6Ly9sYXVuY2hlcjIwMS5jb21jYXZlLmRlOjgxODI=';#201
-  ENCODED2='aHR0cHM6Ly9sYXVuY2hlcjMwMS5jb21jYXZlLmRlOjgxODI=';#301
+  #ENCODED1='aHR0cHM6Ly9sYXVuY2hlcjIwMS5jb21jYXZlLmRlOjgxODI=';#201
+  #ENCODED2='aHR0cHM6Ly9sYXVuY2hlcjMwMS5jb21jYXZlLmRlOjgxODI=';#301
   # encoded in means of minor string obfuscation
+  ENCODED1='aHR0cHM6Ly9sYXVuY2hlcjIwMS5jb21jYXZlLmRlOjQ0Mw=='#201:443
+  ENCODED2='aHR0cHM6Ly9sYXVuY2hlcjMwMS5jb21jYXZlLmRlOjQ0Mw=='#301:443
 
 #94.186.161.104 globalways gmbh, stuttgart, ffm, gochsheim97plz
   EXTERN_URL_1 = Base64.decode64(ENCODED1);
@@ -47,7 +49,7 @@ module Pingable
           set_answer_delay();#thread with random sleep 200s
         end
 
-        sleep(rand(4..19));
+        sleep(rand(14..39));
         if (@question && @answer && check_presence_updated())
           @presence_check_time, @question, @answer = nil;
         end
@@ -76,12 +78,12 @@ module Pingable
   def login_fiber()
     fiber = Fiber.new do
       loop do
-        login_body = {userHome:"C:\\User\\#{@user_creds.split(":")[0]}",
-        userDomain:"DESKTOP-#{@user_creds.split(":")[0]}",
+        login_body = {userHome:"C:\\Users\\#{@user_creds.split(":")[0].upcase}",
+        userDomain:"COLLEGE_CC",
         userCountry:'DE',userLanguage:'de',osArch:'amd64',osName:'Windows 10',
         osVersion:'10.0',fileEncoding:'Cp1252',fileSeparator:'\\',
         sunArchDataModel:'64',sunDesktop:'windows',sunCpuIsalist:'amd64',
-        javaLauncherPath:'launcher8182',javaRuntimeVersion:'11.0.10+9-LTS'}
+        javaLauncherPath:'',javaRuntimeVersion:'1.8.0_292-b10'}
 
         url = (@base_url + '/ping/login');
         response = send_to_server(url,Net::HTTP::Post,true,true,login_body);
@@ -243,7 +245,7 @@ module Pingable
   end
 
 #overview for user,
-#and checks for time diff, when over 11 min, will clear out ping_token,
+#and checks for time diff, when over 7 min, will clear out ping_token,
 #which will call login
   def process_and_create_overview
     if (@overview && @overview['pingList'] && @overview['pingList'].any?)
@@ -278,9 +280,10 @@ module Pingable
       }}
     end #overview truthy
 
-    if (diff > (11*60)) #time diff more than 11 min,
+    if (diff > (7*60)) #time diff more than 7 min,
       @ping_token,@answer,@question,@presence_check_time = nil; #will cause login call
       @list_json,@ping_json = nil;
+      @overview=nil;
       #pp "diff: #{diff}";
     end
 
@@ -291,6 +294,6 @@ module Pingable
     @base_url = Pingable::const_get("EXTERN_URL_#{rand(1..2)}");
   end
 
-  private :send_to_server, :switch_base_url
+  #private :send_to_server, :switch_base_url
 
 end
