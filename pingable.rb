@@ -200,7 +200,7 @@ module Pingable
   def check_presence_updated
     updated = false;
     @list_json['presenceCheckList'].each{|📦| updated = true if #1f4e6
-      (📦['startTime']..📦['endtime']).include?(@presence_check_time.to_i) }
+      (📦['startTime']..📦['endtime']).include?(@presence_check_time.to_i+3) }
     return updated;
   end
 
